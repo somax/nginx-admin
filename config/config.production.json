@@ -1,0 +1,5 @@
+{
+    "port": 8000,
+    "configPath":"/usr/local/nginx/conf/",
+    "nginxCmd":"/usr/local/bin/nginx"
+}

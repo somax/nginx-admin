@@ -85,8 +85,12 @@ const apiHandler = {
             let _res;
             let _path = req.$path;
             if (_path.base === 'conf') {
+                // _res = {
+                //     apis: '/api/conf/vhosts'
+                // };
+                let _files = fs.readdirSync(CONFIG_PATH);
                 _res = {
-                    apis: '/api/conf/vhosts'
+                    apis: _files.map(v => `/api/conf/${v}`)
                 };
             } else {
                 _res = {
@@ -157,32 +161,42 @@ const httpServer = http.createServer((req, res) => {
 
     if (/^\/api/.test(req.url)) {
 
+        res.setHeader('content-type','application/json');
+
+        res.sendError = function (err, code = 500) {
+            console.log(err);
+            this.statusCode = code;
+            this.end(JSON.stringify({ msg: err.toString()}));
+        };
+
         parsePath(req);
 
         parseBody(req).then(
         (body) => {
-            try {
-                apiHandler[req.$path.dir][req.method](req, (_res = {}) => {
-                    if (_res.statusCode) {
-                        res.statusCode = _res.statusCode;
+            if(apiHandler[req.$path.dir]){
+                if( apiHandler[req.$path.dir][req.method]){
+                    try{
+
+                        apiHandler[req.$path.dir][req.method](req, (_res = {}) => {
+                            if (_res.statusCode) {
+                                res.statusCode = _res.statusCode;
+                            }
+                            res.end(JSON.stringify(_res));
+                        });
+                    }catch(err){
+                        res.sendError(err);             
                     }
-                    res.setHeader('content-type','application/json');
-                    res.end(JSON.stringify(_res));
-                });
-            } catch (err) {
-                console.error(err);
-                res.statusCode = 500;
-                res.end(JSON.stringify({
-                    msg: err.toString()
-                }));
+
+                }else{
+                    res.sendError('Method not allowed!');
+                }
+
+            }else{
+                res.sendError('not found!',404);
             }
         },
         (err) => {
-            console.error(err);
-            res.statusCode = 500;
-            res.end(JSON.stringify({
-                msg: err.toString()
-            }));
+            res.sendError(err);
         });
     } else {
         let file;
